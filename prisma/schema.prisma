@@ -1,0 +1,244 @@
+// Green Square — B2B agri-food data model.
+// Dev: SQLite (file). Prod: switch provider to "postgresql" + DATABASE_URL.
+// See DATA_MODEL.md for the full documented model.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Merchant (marchand / fournisseur, e.g. "Mondial Food"). Top level of the
+// catalogue: a merchant groups several brands. Shown on the home page.
+// ---------------------------------------------------------------------------
+model Merchant {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  logoUrl      String?
+  coverUrl     String?
+  description  String?
+  website      String?
+  displayOrder Int      @default(0)
+  active       Boolean  @default(true)
+  brands       Brand[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Brand (e.g. Bladi, Findus, Darta). Belongs to one merchant.
+// One product -> one brand.
+// ---------------------------------------------------------------------------
+model Brand {
+  id           String    @id @default(cuid())
+  slug         String    @unique
+  name         String
+  logoUrl      String?
+  coverUrl     String?
+  description  String?
+  country      String?
+  website      String?
+  displayOrder Int       @default(0)
+  active       Boolean   @default(true)
+  merchantId   String?
+  merchant     Merchant? @relation(fields: [merchantId], references: [id])
+  products     Product[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([merchantId])
+}
+
+// ---------------------------------------------------------------------------
+// Product. Price stored HT per UNIT. Stock stored in UNITS.
+// Packaging (colis/palette) drives the whole B2B UI.
+// ---------------------------------------------------------------------------
+model Product {
+  id          String  @id @default(cuid())
+  handle      String  @unique
+  title       String
+  brandId     String
+  brand       Brand   @relation(fields: [brandId], references: [id])
+  category    String?
+  productType String?
+  sku         String? @unique // SKU = EBP article code when available. Never random when real code exists.
+  ean         String?
+  shortDesc   String?
+  description String?
+  imageUrl    String?
+  galleryJson String  @default("[]") // JSON string[] of image URLs
+
+  // Pricing (HT per unit, in cents to avoid float drift). Null = price unknown.
+  unitPriceHtCents Int?
+
+  // Stock in UNITS. Null = not tracked.
+  stockUnits Int?
+
+  // Logistics / packaging (custom.* metafields equivalent).
+  unitsPerCase   Int? // strictly positive integer when set
+  casesPerPallet Int? // strictly positive integer or null
+  caseOrderStep  Int  @default(1) // step in CASES
+  minimumCases   Int  @default(1)
+  netWeightG     Int? // net weight per unit in grams
+  caseWeightG    Int?
+  storageType    String? // ambient | chilled | frozen
+  storageTempC   String?
+  countryOrigin  String?
+  leadTime       String?
+
+  status     ProductStatus @default(DRAFT) // DRAFT until price + packaging validated
+  sourceUrl  String? // Mondial Food canonical URL (traceability)
+  lastImport DateTime?
+
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([brandId])
+  @@index([category])
+  @@index([status])
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+}
+
+// ---------------------------------------------------------------------------
+// User + pro validation (replaces Shopify customer + pro_valide tag).
+// ---------------------------------------------------------------------------
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(VISITOR)
+  companyName  String?
+  firstName    String?
+  lastName     String?
+  phone        String?
+  proRequest   ProAccountRequest?
+  carts        Cart[]
+  orders       Order[]
+  sessions     Session[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum UserRole {
+  VISITOR    // registered but not validated -> prices hidden (N/D), cannot order
+  PRO_VALIDE // validated professional -> prices visible, can order
+  ADMIN
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Pro account request form (section 19).
+model ProAccountRequest {
+  id            String                  @id @default(cuid())
+  userId        String                  @unique
+  user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName   String
+  tradeName     String?
+  firstName     String
+  lastName      String
+  email         String
+  phone         String
+  address       String
+  postalCode    String
+  city          String
+  country       String
+  siret         String
+  vatNumber     String?
+  activity      String?
+  estimatedVolume String?
+  message       String?
+  status        ProRequestStatus        @default(PENDING)
+  createdAt     DateTime                @default(now())
+  reviewedAt    DateTime?
+}
+
+enum ProRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ---------------------------------------------------------------------------
+// Cart. Quantities stored in CASES (source of truth for the UI).
+// Unit quantity is always derived: units = cases * unitsPerCase.
+// ---------------------------------------------------------------------------
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?
+  user      User?      @relation(fields: [userId], references: [id])
+  token     String     @unique // anonymous cart cookie token
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id            String  @id @default(cuid())
+  cartId        String
+  cart          Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product @relation(fields: [productId], references: [id])
+  caseQuantity  Int // number of colis
+  // Snapshot of packaging at add-time for line integrity (_b2b_* equivalents).
+  unitsPerCase  Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([cartId, productId])
+}
+
+// ---------------------------------------------------------------------------
+// Order (manual / offline flow). Idempotency key for EBP sync.
+// ---------------------------------------------------------------------------
+model Order {
+  id             String      @id @default(cuid())
+  reference      String      @unique
+  userId         String
+  user           User        @relation(fields: [userId], references: [id])
+  status         OrderStatus @default(RECEIVED)
+  subtotalHtCents Int
+  discountHtCents Int         @default(0)
+  vatCents       Int         @default(0)
+  items          OrderItem[]
+  ebpSyncedAt    DateTime?
+  createdAt      DateTime    @default(now())
+}
+
+enum OrderStatus {
+  RECEIVED
+  PROCESSED
+  SENT_TO_EBP
+  REJECTED
+}
+
+model OrderItem {
+  id             String  @id @default(cuid())
+  orderId        String
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product @relation(fields: [productId], references: [id])
+  sku            String?
+  brandName      String
+  caseQuantity   Int
+  unitsPerCase   Int
+  unitPriceHtCents Int
+}

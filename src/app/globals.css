@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    @apply bg-surface-muted text-ink antialiased;
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3 { @apply font-semibold tracking-tight text-ink; }
+  a { color: inherit; }
+  /* Visible focus for accessibility (section 30). */
+  :focus-visible { outline: 2px solid theme('colors.brand.DEFAULT'); outline-offset: 2px; }
+}
+
+@layer components {
+  .container-gs { @apply mx-auto w-full max-w-content px-4 sm:px-6; }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-control border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary { @apply btn border-brand bg-brand text-white hover:bg-brand-dark; }
+  .btn-outline { @apply btn border-line bg-white text-ink hover:border-brand hover:text-brand; }
+  .card { @apply rounded-card border border-line bg-surface shadow-card; }
+  .badge { @apply inline-flex items-center rounded-control bg-brand-light px-2 py-0.5 text-xs font-medium text-brand-dark; }
+  .field { @apply w-full rounded-control border border-line bg-white px-3 py-2 text-sm focus:border-brand; }
+  .label { @apply mb-1 block text-sm font-medium text-ink-soft; }
+}
