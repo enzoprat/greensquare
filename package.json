@@ -9,9 +9,11 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:setup": "prisma db push && npm run import:build && npm run import:load && npm run db:seed",
     "scrape:mondialfood": "tsx scripts/scrape-mondialfood.ts",
     "import:build": "tsx scripts/build-import.ts",
     "import:load": "tsx scripts/load-products.ts"
