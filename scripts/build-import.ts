@@ -17,7 +17,10 @@
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseCsv, toCsv } from '../src/lib/csv';
-import { slugify } from '../src/lib/text';
+import { slugify, decodeEntities } from '../src/lib/text';
+
+// Decode HTML entities in a text field (source CSVs may carry "&amp;", "&#8211;", ...).
+const dec = (v: string) => decodeEntities(v ?? '');
 
 const ROOT = join(process.cwd(), 'imports');
 const BRANDS_DIR = join(ROOT, 'brands');
@@ -70,7 +73,7 @@ async function main() {
       const unitsPerPallet = upc.value != null && cpp.value != null ? upc.value * cpp.value : null;
 
       const bslug = r.brand_slug || 'sans-marque';
-      const b = brands.get(bslug) ?? { slug: bslug, name: r.brand_name || 'Sans marque', product_count: 0 };
+      const b = brands.get(bslug) ?? { slug: bslug, name: dec(r.brand_name) || 'Sans marque', product_count: 0 };
       b.product_count++;
       brands.set(bslug, b);
 
@@ -81,13 +84,13 @@ async function main() {
 
       master.push({
         handle: r.handle,
-        title: r.title,
+        title: dec(r.title),
         brand_slug: bslug,
-        brand_name: r.brand_name,
-        category: r.category,
+        brand_name: dec(r.brand_name),
+        category: dec(r.category),
         sku: r.sku,
-        short_description: r.short_description,
-        description: r.description,
+        short_description: dec(r.short_description),
+        description: dec(r.description),
         image_main: r.image_main,
         image_gallery: r.image_gallery,
         unit_price_ht_cents: '', // to be filled by Green Square
