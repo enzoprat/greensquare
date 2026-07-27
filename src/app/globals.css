@@ -27,6 +27,6 @@
   .btn-outline { @apply btn border-line bg-white text-ink hover:border-brand hover:text-brand; }
   .card { @apply rounded-card border border-line bg-surface shadow-card; }
   .badge { @apply inline-flex items-center rounded-control bg-brand-light px-2 py-0.5 text-xs font-medium text-brand-dark; }
-  .field { @apply w-full rounded-control border border-line bg-white px-3 py-2 text-sm focus:border-brand; }
+  .field { @apply w-full rounded-control border border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-soft focus:border-brand; }
   .label { @apply mb-1 block text-sm font-medium text-ink-soft; }
 }
