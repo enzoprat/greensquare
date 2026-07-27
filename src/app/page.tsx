@@ -27,7 +27,7 @@ export default async function HomePage() {
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link href="/catalogue" className="btn-primary">Accéder au catalogue</Link>
-              <Link href="/compte/demande-pro" className="btn-outline">Ouvrir un compte pro</Link>
+              <Link href="/compte/demande-pro" className="btn-outline">Devenir client</Link>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
