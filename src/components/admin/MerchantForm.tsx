@@ -11,6 +11,9 @@ type MerchantLike = {
 } | null;
 
 export function MerchantForm({ merchant }: { merchant: MerchantLike }) {
+  const logo = merchant?.logoUrl ?? null;
+  // Don't dump an uploaded (base64) logo into the URL text field.
+  const logoUrlValue = logo && !logo.startsWith('data:') ? logo : '';
   return (
     <form action={saveMerchant} className="card grid gap-4 p-5">
       {merchant ? <input type="hidden" name="id" value={merchant.id} /> : null}
@@ -19,8 +22,20 @@ export function MerchantForm({ merchant }: { merchant: MerchantLike }) {
         <input name="name" defaultValue={merchant?.name ?? ''} required className="field" />
       </div>
       <div>
-        <label className="label">Logo (URL)</label>
-        <input name="logoUrl" defaultValue={merchant?.logoUrl ?? ''} className="field" placeholder="https://…" />
+        <label className="label">Logo</label>
+        {logo ? (
+          <div className="mb-2 flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logo} alt="Logo actuel" className="h-12 max-w-[120px] rounded border border-line object-contain" />
+            <span className="text-xs text-ink-faint">Logo actuel</span>
+          </div>
+        ) : null}
+        <input name="logoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="field" />
+        <p className="mt-1 text-xs text-ink-faint">PNG, JPG, WEBP ou SVG · max 512 Ko. Ou collez une URL ci-dessous.</p>
+      </div>
+      <div>
+        <label className="label">Logo (URL, alternative au fichier)</label>
+        <input name="logoUrl" defaultValue={logoUrlValue} className="field" placeholder="https://…" />
       </div>
       <div>
         <label className="label">Site web</label>

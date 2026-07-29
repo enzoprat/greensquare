@@ -6,6 +6,29 @@ import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/admin';
 import { slugify } from '@/lib/text';
 
+// Accepted logo/image types + size cap (stored inline as data-URL in the DB,
+// so keep it small — Vercel's filesystem is read-only, no disk uploads).
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+const IMAGE_MAX_BYTES = 512 * 1024; // 512 Ko
+
+/**
+ * If a file was uploaded under `field`, validate it and return a data-URL.
+ * Returns undefined when no file was provided (caller keeps the URL text field).
+ * Throws on an invalid type or an oversized file.
+ */
+async function uploadedImageDataUrl(formData: FormData, field: string): Promise<string | undefined> {
+  const file = formData.get(field);
+  if (!(file instanceof File) || file.size === 0) return undefined;
+  if (!IMAGE_TYPES.includes(file.type)) {
+    throw new Error(`Format d'image non supporté (${file.type}). Utilisez PNG, JPG, WEBP ou SVG.`);
+  }
+  if (file.size > IMAGE_MAX_BYTES) {
+    throw new Error(`Image trop lourde (${Math.round(file.size / 1024)} Ko). Maximum 512 Ko.`);
+  }
+  const b64 = Buffer.from(await file.arrayBuffer()).toString('base64');
+  return `data:${file.type};base64,${b64}`;
+}
+
 // --------------------------------------------------------------------------
 // Pro account requests
 // --------------------------------------------------------------------------
@@ -79,7 +102,8 @@ export async function saveMerchant(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get('id') ?? '');
   const name = String(formData.get('name') ?? '').trim();
-  const logoUrl = String(formData.get('logoUrl') ?? '').trim() || null;
+  const uploadedLogo = await uploadedImageDataUrl(formData, 'logoFile');
+  const logoUrl = uploadedLogo ?? (String(formData.get('logoUrl') ?? '').trim() || null);
   const description = String(formData.get('description') ?? '').trim() || null;
   const website = String(formData.get('website') ?? '').trim() || null;
   const active = formData.get('active') === 'on';
@@ -87,7 +111,12 @@ export async function saveMerchant(formData: FormData) {
   if (!name) return;
 
   if (id) {
-    await prisma.merchant.update({ where: { id }, data: { name, logoUrl, description, website, active, displayOrder } });
+    // Only overwrite the logo when a new file was uploaded (or a URL typed);
+    // an empty upload keeps the existing logo.
+    const data = uploadedLogo === undefined && !formData.get('logoUrl')
+      ? { name, description, website, active, displayOrder }
+      : { name, logoUrl, description, website, active, displayOrder };
+    await prisma.merchant.update({ where: { id }, data });
   } else {
     const slug = await uniqueSlug('merchant', slugify(name));
     await prisma.merchant.create({ data: { slug, name, logoUrl, description, website, active, displayOrder } });
