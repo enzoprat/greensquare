@@ -26,6 +26,7 @@ model Merchant {
   displayOrder Int      @default(0)
   active       Boolean  @default(true)
   brands       Brand[]
+  clientAccess ClientMerchantAccess[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -108,6 +109,7 @@ model Product {
 enum ProductStatus {
   DRAFT
   ACTIVE
+  DORMANT // mis en sommeil : conservé mais masqué du catalogue, réactivable
 }
 
 // ---------------------------------------------------------------------------
@@ -126,8 +128,28 @@ model User {
   carts        Cart[]
   orders       Order[]
   sessions     Session[]
+  merchantAccess ClientMerchantAccess[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Visibilité mandant par client (allowlist). Sans ligne visible=true pour un
+// (client, mandant), le client ne voit PAS ce mandant ni ses produits.
+// ---------------------------------------------------------------------------
+model ClientMerchantAccess {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  visible    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, merchantId])
+  @@index([userId])
+  @@index([merchantId])
 }
 
 enum UserRole {

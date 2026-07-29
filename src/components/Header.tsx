@@ -34,6 +34,9 @@ export function Header({ user }: { user: SessionUser | null }) {
         <div className="ml-auto flex items-center gap-3 md:ml-2">
           {user ? (
             <div className="hidden items-center gap-2 text-sm sm:flex">
+              {user.role === 'ADMIN' ? (
+                <Link href="/admin" className="rounded-control bg-white/15 px-2 py-1 font-medium text-white hover:bg-white/25">Admin</Link>
+              ) : null}
               <span className="text-white/80">{user.role === 'PRO_VALIDE' ? 'Pro validé' : user.role === 'ADMIN' ? 'Admin' : 'Compte'}</span>
               <button onClick={logout} className="text-white/80 hover:text-white">Déconnexion</button>
             </div>
