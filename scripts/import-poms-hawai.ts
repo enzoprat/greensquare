@@ -19,17 +19,20 @@ type Row = {
   priceEur: number; // per-unit HT in euros
   unitsPerCase: number;
   ean: string | null;
-  brand: 'poms' | 'hawai' | 'don-simon' | 'rostoy';
+  brand: 'poms-hawai' | 'don-simon' | 'rostoy';
 };
 
 const MERCHANT = { slug: 'poms-hawai', name: 'Poms & Hawai' };
 
+// Pom's and Hawai share the same product category -> one merged brand.
 const BRANDS: { slug: string; name: string; orderGroupKey: string; displayOrder: number }[] = [
-  { slug: 'poms', name: "Pom's", orderGroupKey: 'poms-hawai', displayOrder: 0 },
-  { slug: 'hawai', name: 'Hawai', orderGroupKey: 'poms-hawai', displayOrder: 1 },
-  { slug: 'don-simon', name: 'Don Simon', orderGroupKey: 'don-simon-rostoy', displayOrder: 2 },
-  { slug: 'rostoy', name: 'Rostoy', orderGroupKey: 'don-simon-rostoy', displayOrder: 3 },
+  { slug: 'poms-hawai', name: 'Poms & Hawai', orderGroupKey: 'poms-hawai', displayOrder: 0 },
+  { slug: 'don-simon', name: 'Don Simon', orderGroupKey: 'don-simon-rostoy', displayOrder: 1 },
+  { slug: 'rostoy', name: 'Rostoy', orderGroupKey: 'don-simon-rostoy', displayOrder: 2 },
 ];
+
+// Slugs of legacy brands to fold into the merged "Poms & Hawai" brand, then delete.
+const LEGACY_MERGED = ['poms', 'hawai'];
 
 const ROWS: Row[] = [
   // Don Simon — Nectar 1,5 L PET (prix à 0 €, à compléter)
@@ -40,10 +43,10 @@ const ROWS: Row[] = [
   { sku: '3960', title: 'Don Simon Nectar Orange 1,5 L PET (x6)', priceEur: 0, unitsPerCase: 6, ean: null, brand: 'don-simon' },
   { sku: '3962', title: 'Don Simon Nectar Pêche 1,5 L PET (x6)', priceEur: 0, unitsPerCase: 6, ean: null, brand: 'don-simon' },
   // Hawai — 1,50 L PET
-  { sku: 'HAWANA150PETX6', title: 'HAWAI ANANAS 1,50 L PET (x6)', priceEur: 0.95, unitsPerCase: 6, ean: null, brand: 'hawai' },
-  { sku: 'HAWFR150PETX6', title: 'HAWAI FRAISE 1,50 L PET (x6)', priceEur: 0.95, unitsPerCase: 6, ean: null, brand: 'hawai' },
-  { sku: 'HAWOR150PETX6', title: 'HAWAI ORANGE 1,50 L PET (x6)', priceEur: 0.95, unitsPerCase: 6, ean: null, brand: 'hawai' },
-  { sku: 'HATR150PETX6', title: 'HAWAI TROPICAL 1,50 L PET (x6)', priceEur: 0.95, unitsPerCase: 6, ean: '3760301291152', brand: 'hawai' },
+  { sku: 'HAWANA150PETX6', title: 'HAWAI ANANAS 1,50 L PET (x6)', priceEur: 0.95, unitsPerCase: 6, ean: null, brand: 'poms-hawai' },
+  { sku: 'HAWFR150PETX6', title: 'HAWAI FRAISE 1,50 L PET (x6)', priceEur: 0.95, unitsPerCase: 6, ean: null, brand: 'poms-hawai' },
+  { sku: 'HAWOR150PETX6', title: 'HAWAI ORANGE 1,50 L PET (x6)', priceEur: 0.95, unitsPerCase: 6, ean: null, brand: 'poms-hawai' },
+  { sku: 'HATR150PETX6', title: 'HAWAI TROPICAL 1,50 L PET (x6)', priceEur: 0.95, unitsPerCase: 6, ean: '3760301291152', brand: 'poms-hawai' },
   // Rostoy — Jus 1 L Amphore Verre
   { sku: '10031', title: 'Jus de Pomme Rostoy 1 L Amphore Verre (x6)', priceEur: 1.25, unitsPerCase: 6, ean: null, brand: 'rostoy' },
   { sku: '10032', title: 'Jus de Raisin Blanc Rostoy 1 L Amphore Verre (x6)', priceEur: 1.25, unitsPerCase: 6, ean: null, brand: 'rostoy' },
@@ -67,7 +70,7 @@ const ROWS: Row[] = [
   { sku: '11236', title: 'Nectar Orange Rostoy 1 L Amphore Verre (x6)', priceEur: 1.25, unitsPerCase: 6, ean: '8410261775067', brand: 'rostoy' },
   { sku: '11238', title: 'Nectar Pêche Rostoy 1 L Amphore Verre (x6)', priceEur: 1.25, unitsPerCase: 6, ean: '8410261775081', brand: 'rostoy' },
   // Pom's — 1,50 L PET
-  { sku: 'POMS150PETX6', title: "POM'S 1,50 L PET (x6)", priceEur: 0.95, unitsPerCase: 6, ean: '3760301291190', brand: 'poms' },
+  { sku: 'POMS150PETX6', title: "POM'S 1,50 L PET (x6)", priceEur: 0.95, unitsPerCase: 6, ean: '3760301291190', brand: 'poms-hawai' },
   // Don Simon — Simon Life 1,5 L PET
   { sku: '1304', title: 'Simon Life Fraise 1,5 L PET (x6)', priceEur: 1.25, unitsPerCase: 6, ean: null, brand: 'don-simon' },
   { sku: '1305', title: 'Simon Life Mandarine 1,50 L PET (x6)', priceEur: 1.25, unitsPerCase: 6, ean: null, brand: 'don-simon' },
@@ -126,7 +129,19 @@ async function main() {
     }
   }
 
-  console.log('[import-poms-hawai]', { merchant: merchant.slug, brands: brandIdBySlug.size, created, updated, total: ROWS.length });
+  // Fold any legacy split brands (Pom's, Hawai) into the merged brand, then
+  // remove the now-empty legacy brands. No-op after the first run.
+  const mergedId = brandIdBySlug.get('poms-hawai')!;
+  let moved = 0;
+  for (const slug of LEGACY_MERGED) {
+    const legacy = await prisma.brand.findUnique({ where: { slug } });
+    if (!legacy || legacy.id === mergedId) continue;
+    const res = await prisma.product.updateMany({ where: { brandId: legacy.id }, data: { brandId: mergedId } });
+    moved += res.count;
+    await prisma.brand.delete({ where: { id: legacy.id } });
+  }
+
+  console.log('[import-poms-hawai]', { merchant: merchant.slug, brands: brandIdBySlug.size, created, updated, moved, total: ROWS.length });
   await prisma.$disconnect();
 }
 
