@@ -48,6 +48,10 @@ model Brand {
   active       Boolean   @default(true)
   merchantId   String?
   merchant     Merchant? @relation(fields: [merchantId], references: [id])
+  // Order-group key: brands sharing the same key can be ordered together, but a
+  // single order cannot mix different keys within the same merchant. Null = no
+  // grouping constraint (brand can be ordered with anything from its merchant).
+  orderGroupKey String?
   products     Product[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

@@ -56,8 +56,12 @@ async function main() {
     },
   });
 
-  // Attach every existing brand to Mondial Food and apply its real logo.
-  const allBrands = await prisma.brand.findMany();
+  // Attach unassigned brands to Mondial Food and apply its real logo. Brands
+  // already belonging to another merchant (e.g. Poms & Hawai) are left untouched
+  // so a re-seed never hijacks them.
+  const allBrands = await prisma.brand.findMany({
+    where: { OR: [{ merchantId: null }, { merchantId: mondialFood.id }] },
+  });
   for (const b of allBrands) {
     await prisma.brand.update({
       where: { id: b.id },

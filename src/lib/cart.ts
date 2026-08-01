@@ -133,6 +133,29 @@ export interface CartView {
 
 type CartWithItems = Awaited<ReturnType<typeof getOrCreateCart>>;
 
+/**
+ * Order-group rule: some merchants split their brands into groups that cannot
+ * be mixed in one order (e.g. Poms & Hawai: "Poms+Hawai" vs "Don Simon+Rostoy").
+ * Brands with a null orderGroupKey are unconstrained. A cart is in conflict as
+ * soon as it holds products from two or more distinct non-null group keys.
+ */
+function orderGroupConflict(cart: CartWithItems): { conflict: boolean; message: string | null } {
+  const groups = new Map<string, Set<string>>(); // key -> brand names present
+  for (const item of cart.items) {
+    const key = item.product.brand.orderGroupKey;
+    if (!key) continue;
+    const names = groups.get(key) ?? new Set<string>();
+    names.add(item.product.brand.name);
+    groups.set(key, names);
+  }
+  if (groups.size < 2) return { conflict: false, message: null };
+  const labels = [...groups.values()].map((s) => [...s].join(' + '));
+  return {
+    conflict: true,
+    message: `Une commande ne peut pas mélanger ces groupes : ${labels.join(' / ')}. Merci de passer une commande distincte pour chacun.`,
+  };
+}
+
 /** Build the view sent to the client. Prices only for pro_valide. */
 export function buildCartView(cart: CartWithItems, role: string | null | undefined): CartView {
   const allowed = canSeePrices(role);
@@ -180,9 +203,11 @@ export function buildCartView(cart: CartWithItems, role: string | null | undefin
 
   const min = evaluateMinimumOrder(subtotal, ORDER_MINIMUM_HT_CENTS);
   const empty = cart.items.length === 0;
+  const groupCheck = orderGroupConflict(cart);
   let blockReason: string | null = null;
   if (!allowed) blockReason = 'Connectez-vous avec un compte professionnel validé pour commander.';
   else if (empty) blockReason = 'Votre panier est vide.';
+  else if (groupCheck.conflict) blockReason = groupCheck.message;
   else if (!min.reached) blockReason = `Ajoutez encore ${formatEur(min.remainingHtCents)} HT pour atteindre le minimum de commande.`;
 
   return {
@@ -199,7 +224,7 @@ export function buildCartView(cart: CartWithItems, role: string | null | undefin
       reached: allowed && min.reached,
       displayRemaining: allowed ? formatEur(min.remainingHtCents) + ' HT' : PRICE_HIDDEN,
     },
-    checkoutAllowed: allowed && !empty && min.reached,
+    checkoutAllowed: allowed && !empty && min.reached && !groupCheck.conflict,
     blockReason,
   };
 }
@@ -218,6 +243,9 @@ export async function validateCheckout(userRole: string | null | undefined, user
   }
   const cart = await getOrCreateCart(userId);
   if (cart.items.length === 0) return { ok: false as const, message: 'Panier vide.' };
+
+  const groupCheck = orderGroupConflict(cart);
+  if (groupCheck.conflict) return { ok: false as const, message: groupCheck.message! };
 
   let subtotal = 0;
   for (const item of cart.items) {
