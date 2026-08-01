@@ -134,12 +134,17 @@ export async function saveBrand(formData: FormData) {
   const id = String(formData.get('id') ?? '');
   const merchantId = String(formData.get('merchantId') ?? '') || null;
   const name = String(formData.get('name') ?? '').trim();
-  const logoUrl = String(formData.get('logoUrl') ?? '').trim() || null;
+  const uploadedLogo = await uploadedImageDataUrl(formData, 'logoFile');
+  const logoUrl = uploadedLogo ?? (String(formData.get('logoUrl') ?? '').trim() || null);
   const active = formData.get('active') === 'on';
   if (!name) return;
 
   if (id) {
-    await prisma.brand.update({ where: { id }, data: { name, logoUrl, active, merchantId } });
+    // Keep the existing logo when no new file was uploaded and no URL was typed.
+    const data = uploadedLogo === undefined && !formData.get('logoUrl')
+      ? { name, active, merchantId }
+      : { name, logoUrl, active, merchantId };
+    await prisma.brand.update({ where: { id }, data });
   } else {
     const slug = await uniqueSlug('brand', slugify(name));
     await prisma.brand.create({ data: { slug, name, logoUrl, active, merchantId } });
