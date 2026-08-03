@@ -1,4 +1,5 @@
 import { saveProduct } from '@/app/admin/actions';
+import { ImageFileInput } from './ImageFileInput';
 
 type ProductLike = {
   id: string;
@@ -67,9 +68,9 @@ export function ProductForm({ product, brands, defaultBrandId }: { product: Prod
             ) : (
               <span className="grid h-16 w-16 shrink-0 place-items-center rounded border border-dashed border-line text-[10px] text-ink-faint">photo</span>
             )}
-            <input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="field flex-1 min-w-[180px]" />
+            <ImageFileInput name="imageFile" className="flex-1 min-w-[180px]" />
           </div>
-          <p className="mt-1 text-xs text-ink-faint">PNG, JPG, WEBP ou SVG · max 512 Ko. Ou collez une URL ci-dessous.</p>
+          <p className="mt-1 text-xs text-ink-faint">PNG, JPG, WEBP ou SVG · max 10 Mo. Ou collez une URL ci-dessous.</p>
           <input name="imageUrl" defaultValue={product?.imageUrl && !product.imageUrl.startsWith('data:') ? product.imageUrl : ''} className="field mt-2" placeholder="ou https://…" />
         </div>
       </div>

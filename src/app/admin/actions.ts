@@ -9,7 +9,7 @@ import { slugify } from '@/lib/text';
 // Accepted logo/image types + size cap (stored inline as data-URL in the DB,
 // so keep it small — Vercel's filesystem is read-only, no disk uploads).
 const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
-const IMAGE_MAX_BYTES = 512 * 1024; // 512 Ko
+const IMAGE_MAX_BYTES = 10 * 1024 * 1024; // 10 Mo (kept in sync with the client-side guard)
 
 /**
  * If a file was uploaded under `field`, validate it and return a data-URL.
@@ -23,7 +23,7 @@ async function uploadedImageDataUrl(formData: FormData, field: string): Promise<
     throw new Error(`Format d'image non supporté (${file.type}). Utilisez PNG, JPG, WEBP ou SVG.`);
   }
   if (file.size > IMAGE_MAX_BYTES) {
-    throw new Error(`Image trop lourde (${Math.round(file.size / 1024)} Ko). Maximum 512 Ko.`);
+    throw new Error(`Image trop lourde (${(file.size / 1024 / 1024).toFixed(1)} Mo). Maximum 10 Mo.`);
   }
   const b64 = Buffer.from(await file.arrayBuffer()).toString('base64');
   return `data:${file.type};base64,${b64}`;

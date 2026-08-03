@@ -1,4 +1,5 @@
 import { saveMerchant } from '@/app/admin/actions';
+import { ImageFileInput } from './ImageFileInput';
 
 type MerchantLike = {
   id: string;
@@ -30,8 +31,8 @@ export function MerchantForm({ merchant }: { merchant: MerchantLike }) {
             <span className="text-xs text-ink-faint">Logo actuel</span>
           </div>
         ) : null}
-        <input name="logoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="field" />
-        <p className="mt-1 text-xs text-ink-faint">PNG, JPG, WEBP ou SVG · max 512 Ko. Ou collez une URL ci-dessous.</p>
+        <ImageFileInput name="logoFile" />
+        <p className="mt-1 text-xs text-ink-faint">PNG, JPG, WEBP ou SVG · max 10 Mo. Ou collez une URL ci-dessous.</p>
       </div>
       <div>
         <label className="label">Logo (URL, alternative au fichier)</label>

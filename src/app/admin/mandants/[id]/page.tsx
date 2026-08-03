@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { AdminPageHeader } from '@/components/admin/ui';
 import { MerchantForm } from '@/components/admin/MerchantForm';
+import { ImageFileInput } from '@/components/admin/ImageFileInput';
 import { saveBrand } from '../../actions';
 
 export default async function EditMerchantPage({ params }: { params: Promise<{ id: string }> }) {
@@ -54,7 +55,7 @@ export default async function EditMerchantPage({ params }: { params: Promise<{ i
                   <Link href={`/admin/produits?brand=${b.id}`} className="text-xs text-brand hover:underline">Produits</Link>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <input name="logoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="field flex-1 min-w-[160px] text-xs" />
+                  <ImageFileInput name="logoFile" className="flex-1 min-w-[160px]" inputClassName="field w-full text-xs" />
                   <input name="logoUrl" defaultValue={b.logoUrl && !b.logoUrl.startsWith('data:') ? b.logoUrl : ''} placeholder="ou Logo URL" className="field flex-1 min-w-[120px]" />
                   <button className="btn-outline px-3 py-1 text-xs">Enregistrer</button>
                 </div>
@@ -68,7 +69,7 @@ export default async function EditMerchantPage({ params }: { params: Promise<{ i
             <input type="hidden" name="backTo" value={backTo} />
             <input name="name" placeholder="Nom de la marque" required className="field" />
             <div className="flex flex-wrap items-center gap-2">
-              <input name="logoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="field flex-1 min-w-[160px] text-xs" />
+              <ImageFileInput name="logoFile" className="flex-1 min-w-[160px]" inputClassName="field w-full text-xs" />
               <input name="logoUrl" placeholder="ou Logo URL (option.)" className="field flex-1 min-w-[140px]" />
             </div>
             <input type="hidden" name="active" value="on" />
