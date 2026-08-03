@@ -173,7 +173,9 @@ export async function saveProduct(formData: FormData) {
   const category = String(formData.get('category') ?? '').trim() || null;
   const sku = String(formData.get('sku') ?? '').trim() || null;
   const ean = String(formData.get('ean') ?? '').trim() || null;
-  const imageUrl = String(formData.get('imageUrl') ?? '').trim() || null;
+  const uploadedImage = await uploadedImageDataUrl(formData, 'imageFile');
+  const typedImageUrl = String(formData.get('imageUrl') ?? '').trim();
+  const imageUrl = uploadedImage ?? (typedImageUrl || null);
   const shortDesc = String(formData.get('shortDesc') ?? '').trim() || null;
   const description = String(formData.get('description') ?? '').trim() || null;
   const storageType = String(formData.get('storageType') ?? '').trim() || null;
@@ -186,15 +188,17 @@ export async function saveProduct(formData: FormData) {
   if (!title || !brandId) return;
 
   const data = {
-    title, brandId, category, sku, ean, imageUrl, shortDesc, description,
+    title, brandId, category, sku, ean, shortDesc, description,
     storageType, unitPriceHtCents, stockUnits, unitsPerCase, casesPerPallet, status,
   };
 
   if (id) {
-    await prisma.product.update({ where: { id }, data });
+    // Keep the current image when no new file was uploaded and no URL was typed.
+    const keepImage = uploadedImage === undefined && typedImageUrl === '';
+    await prisma.product.update({ where: { id }, data: keepImage ? data : { ...data, imageUrl } });
   } else {
     const handle = await uniqueSlug('product', slugify(title));
-    await prisma.product.create({ data: { ...data, handle } });
+    await prisma.product.create({ data: { ...data, imageUrl, handle } });
   }
   revalidatePath('/admin/produits');
   redirect('/admin/produits');

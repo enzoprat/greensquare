@@ -59,8 +59,18 @@ export function ProductForm({ product, brands, defaultBrandId }: { product: Prod
           <input name="ean" defaultValue={product?.ean ?? ''} className="field" />
         </div>
         <div className="sm:col-span-2">
-          <label className="label">Photo (URL)</label>
-          <input name="imageUrl" defaultValue={product?.imageUrl ?? ''} className="field" placeholder="https://…" />
+          <label className="label">Photo</label>
+          <div className="flex flex-wrap items-center gap-3">
+            {product?.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={product.imageUrl} alt={`Photo ${product.title}`} className="h-16 w-16 shrink-0 rounded border border-line object-contain" />
+            ) : (
+              <span className="grid h-16 w-16 shrink-0 place-items-center rounded border border-dashed border-line text-[10px] text-ink-faint">photo</span>
+            )}
+            <input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="field flex-1 min-w-[180px]" />
+          </div>
+          <p className="mt-1 text-xs text-ink-faint">PNG, JPG, WEBP ou SVG · max 512 Ko. Ou collez une URL ci-dessous.</p>
+          <input name="imageUrl" defaultValue={product?.imageUrl && !product.imageUrl.startsWith('data:') ? product.imageUrl : ''} className="field mt-2" placeholder="ou https://…" />
         </div>
       </div>
 
